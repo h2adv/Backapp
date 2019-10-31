@@ -65,9 +65,18 @@
             text-decoration: none;
             text-transform: uppercase;
         }
-
         .m-b-md {
             margin-bottom: 30px;
+        }
+        .title-list {
+            text-align: right;
+            width: 50%;
+        }
+        .value-list {
+            text-align: left;
+        }
+        table {
+            margin: 40px 0 50px 0!important;
         }
     </style>
 </head>
@@ -210,13 +219,28 @@
             });
         });
 
+        // SET AS LOCAL AN HOST
         $('.is-local').on('click', function(){
             if ($(this).is(':checked')) {
+                $('.remote').hide();
+                $('.localhost').show();
+
                 $(this).val(1);
             }else{
+                $('.remote').show();
+                $('.localhost').hide();
                 $(this).val(0);
             }
         });
+            if ($('.is-local').is(':checked')) {
+                $('.localhost').show();
+                $('.remote').hide();
+            }else{
+                $('.remote').show();
+                $('.localhost').hide();
+
+            }
+
 
         // $('.backup-ftp-do').on('click',function () {
         //     $.ajax({

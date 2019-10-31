@@ -55,7 +55,7 @@ class HostsController extends Controller
         $saved = $request->saved;
 
         $host = DB::table('hosts')->find($id);
-        return view('host-edit', ['host' => $host,'saved'=>$request->saved]);
+        return view('host-edit', ['host' => $host,'saved'=>$saved]);
     }
 
     public function editDoHost(Request $request)
@@ -75,10 +75,7 @@ class HostsController extends Controller
         $host->local_path = $request->local_path;
         if($host->save()){
             return redirect()->route('host-saved', ['id'=>$request->id,'saved'=>true]);
-
-//            redirect()->route('/hosts/edit', array('id'=>$request->id,'saved'=>true));
         }
-
     }
 
 }

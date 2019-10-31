@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
 
+/**
+ * @method static create(array $all)
+ * @method static where(string $string, array|string|null $id)
+ * @method static find($id)
+ */
 class Hosts extends Model
 {
 
