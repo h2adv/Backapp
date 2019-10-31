@@ -57,14 +57,13 @@ class BackupsController extends Controller
      */
     public function ftpDoBackup(Request $request)
     {
-        $id = $request->input('id');
+        $id = $request->route('id');
         $file = storage_path().'/app/public/backup_h2adv.php';
-
         $host = DB::table('hosts')->find($id);
 
         $url_partial =  $host->ftp_host;
-        $url = $url_partial . "/backup_h2adv.php?backup_ftp=true";
 
+        $url = 'http://'.$host->domain;
         $ftp_conn = ftp_connect($url_partial);
 
         if(!ftp_login($ftp_conn, $host->ftp_username, $host->ftp_password))
@@ -72,42 +71,48 @@ class BackupsController extends Controller
             die('Ftp login error');
         }
 
+//        ini_set('display_errors', 1);
+//        ini_set('display_startup_errors', 1);
+//        error_reporting(E_ALL);
+
+
+
         if (ftp_put($ftp_conn, $host->ftp_directory."/backup_h2adv.php", $file, FTP_ASCII))
         {
             ftp_close($ftp_conn);
-
             $data = json_encode(array(
                 'directory'=>$host->ftp_directory
             ));
 
             try {
                 $ch = curl_init();
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+//                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
 
-                curl_setopt_array($ch, array(
-                    CURLOPT_URL => 'www.'.$url,
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_ENCODING => "",
-                    CURLOPT_TIMEOUT => 30000,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    CURLOPT_CUSTOMREQUEST => "GET",
-                    CURLOPT_HTTPHEADER => array(
-                        // Set Here Your Requesred Headers
-                        'Content-Type: application/json',
-                    ),
-                ));
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_URL, $url);
+
                 $response = curl_exec($ch);
-                $err = curl_error($ch);
+//                $err = curl_error($ch);
+
+//                echo $url;
+                var_dump($response);
+//                return;
+                return;
 
 
                 if ($response === false) {
                     echo json_encode(curl_error($ch), curl_errno($ch));
                 }
 
-
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 
                 $json_response = json_decode($response);
+
+
                 echo json_encode($this->downloadBackup($json_response,$host));
                 return;
 

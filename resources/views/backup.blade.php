@@ -13,7 +13,9 @@
         @foreach ($hosts as $host)
             <tr>
                 <td>
-                    <a data-id="{{$host->id}}" class="backup-ftp-do" href="#">Backup ftp now</a> |
+                    <a data-id="{{$host->id}}"
+                       class="backup-ftp-do" href="<?php echo URL::to('/backups/ftp-do',$host->id); ?>">Backup ftp now
+                    </a> |
                     <a data-id="{{$host->id}}" class="backup-mysql-do" href="#">Backup sql now</a>
                 </td>
                 <td>

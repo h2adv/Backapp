@@ -210,32 +210,36 @@
             });
         });
 
-
-        $('.backup-ftp-do').on('click',function () {
-
-            let data = {id: $(this).attr('data-id')};
-            $.ajax({
-                type: 'POST',
-                dataType: "json",
-                data: data,
-                url: '/backups/ftp-do',
-                success: function (data) {
-                    console.log(data);
-
-                    let obj = data;
-                    if(obj.result === "true") {
-                        console.log(obj);
-
-                        // location.reload();
-                    }else{
-                        console.log('Error');
-                    }
-                },
-                error: function(data) {
-                    console.log(data);
-                }
-            });
+        $('.is-local').on('click', function(){
+            if ($(this).is(':checked')) {
+                $(this).val(1);
+            }else{
+                $(this).val(0);
+            }
         });
+
+        // $('.backup-ftp-do').on('click',function () {
+        //     $.ajax({
+        //         type: 'POST',
+        //         dataType: "json",
+        //         url: '/backups/ftp-do/'+$(this).attr('data-id'),
+        //         success: function (data) {
+        //             console.log(data);
+        //
+        //             let obj = data;
+        //             if(obj.result === "true") {
+        //                 console.log(obj);
+        //
+        //                 // location.reload();
+        //             }else{
+        //                 console.log('Error');
+        //             }
+        //         },
+        //         error: function(data) {
+        //             console.log(data);
+        //         }
+        //     });
+        // });
 
         $('.backup-mysql-do').on('click',function () {
 
