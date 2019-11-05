@@ -16,7 +16,9 @@
         "laravelcollective/html": "^5.8",
         "ext-json": "*",
         "ext-ftp": "*",
-        "ext-curl": "*"
+        "ext-curl": "*",
+        "ext-zip": "*",
+        "ext-http": "*"
     },
     "require-dev": {
         "beyondcode/laravel-dump-server": "^1.0",

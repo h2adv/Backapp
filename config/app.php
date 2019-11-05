@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Backupper'),
+    'name' => env('APP_NAME', 'Backapp'),
 
     /*
     |--------------------------------------------------------------------------
@@ -133,6 +133,8 @@ return [
     | this array to grant expanded functionality to your applications.
     |
     */
+
+    'script_file' => env('SCRIPT_FILE', 'backup_h2adv.php'),
 
     'providers' => [
 

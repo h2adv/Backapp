@@ -39,6 +39,14 @@
                     >
                 </td>
             </tr>
+            <tr>
+                <td class="title-list">
+                    host_name
+                </td>
+                <td class="value-list">
+                    <input type="text" name="host_name" placeholder="host_name" value="{{$host->host_name}}">
+                </td>
+            </tr>
             <tr class="localhost">
                 <td class="title-list">
                     localhost path
@@ -57,10 +65,10 @@
             </tr>
             <tr class="remote">
                 <td class="title-list">
-                    host_name
+                    ftp_host
                 </td>
                 <td class="value-list">
-                    <input type="text" name="host_name" placeholder="host_name" value="{{$host->host_name}}">
+                    <input type="text" name="ftp_host" placeholder="ftp_host" value="{{$host->ftp_host}}">
                 </td>
             </tr>
             <tr class="remote">
@@ -68,7 +76,7 @@
                     ftp_host
                 </td>
                 <td class="value-list">
-                    <input type="text" name="ftp_host" placeholder="ftp_host" value="{{$host->ftp_host}}">
+                    <input type="text" name="ftp_directory" placeholder="ftp_directory" value="{{$host->ftp_directory}}">
                 </td>
             </tr>
             <tr class="remote">

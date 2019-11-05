@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use FilesystemIterator;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
 use http\Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Input;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use ZipArchive;
 
 class BackupsController extends Controller
 {
@@ -25,7 +29,12 @@ class BackupsController extends Controller
     private $pass_sql;
     private $target;
     private $conn;
+    private $file_name;
 
+    public function __construct()
+    {
+        $this->file_name = config('app.script_file');
+    }
 
     /**
      * Show all of the users for the application.
@@ -49,21 +58,98 @@ class BackupsController extends Controller
         return view('backup', ['hosts' => $hosts]);
     }
 
-
     /**
      * Show all of the users for the application.
      *
-     * @return Response
      */
     public function ftpDoBackup(Request $request)
     {
         $id = $request->route('id');
-        $file = storage_path().'/app/public/backup_h2adv.php';
         $host = DB::table('hosts')->find($id);
+        if($this->isLocal( $host )){
+            $this->localFtpBackup($host);
+        }else{
+            $this->remoteFtpBackup($host);
+        }
+    }
 
+    /**
+     * @param $host
+     */
+    private function localFtpBackup($host)
+    {
+
+//        $file = storage_path().'/app/public/backup_h2adv.php';
+//        $url_partial =  $host->ftp_host;
+//
+//        $url = 'http://'.$host->domain.'/backup_h2adv.php?backup_ftp=true' ;
+//        $ftp_conn = ftp_connect($url_partial);
+//
+//        if(!ftp_login($ftp_conn, $host->ftp_username, $host->ftp_password))
+//        {
+//            die('Ftp login error');
+//        }
+//
+//        if(ftp_put($ftp_conn, $host->ftp_directory."/backup_h2adv.php", $file, FTP_ASCII))
+//        {
+//
+//            ftp_close($ftp_conn);
+//            $data = json_encode(array(
+//                'directory'=>$host->ftp_directory
+//            ));
+//
+//            try {
+//
+//                $ch = curl_init();
+//
+//                curl_setopt($ch, CURLOPT_URL, $url);
+//                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+//
+//                curl_setopt($ch, CURLOPT_POST, true);
+//                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+//                curl_setopt($ch, CURLOPT_FORBID_REUSE, false);
+//                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+//                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+//
+//                $response  = curl_exec($ch);
+//
+//                $err = curl_error($ch);
+////                curl_close($ch);
+//                var_dump($response);
+//                return;
+//
+//                if ($response === false) {
+//                    echo json_encode(curl_error($ch), curl_errno($ch));
+//                }
+//
+//                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+//                $json_response = json_decode($response);
+//
+//                echo json_encode($this->downloadBackup($json_response,$host));
+//                return;
+//
+//            }catch(Exception $e){
+//                echo json_encode($e->getMessage());
+//                return;
+//            }
+//
+//        }
+//        else
+//        {
+//            echo json_encode(array('result'=>"Error uploading $file."));
+//            return;
+//        }
+
+    }
+
+    /**
+     * @param $host
+     */
+    public function remoteFtpBackup($host){
+
+        $file = storage_path().'/app/public/'.$this->file_name;
         $url_partial =  $host->ftp_host;
-
-        $url = 'http://'.$host->domain;
+        $url = 'http://'.$host->domain.'/'.$this->file_name.'?backup_ftp=true';
         $ftp_conn = ftp_connect($url_partial);
 
         if(!ftp_login($ftp_conn, $host->ftp_username, $host->ftp_password))
@@ -71,15 +157,8 @@ class BackupsController extends Controller
             die('Ftp login error');
         }
 
-//        ini_set('display_errors', 1);
-//        ini_set('display_startup_errors', 1);
-//        error_reporting(E_ALL);
-
-
-
-        if (ftp_put($ftp_conn, $host->ftp_directory."/backup_h2adv.php", $file, FTP_ASCII))
+        if ($file_put = ftp_put($ftp_conn, $host->ftp_directory."/".$this->file_name, $file, FTP_ASCII))
         {
-            ftp_close($ftp_conn);
             $data = json_encode(array(
                 'directory'=>$host->ftp_directory
             ));
@@ -88,30 +167,26 @@ class BackupsController extends Controller
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
-//                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
 
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
                 curl_setopt($ch, CURLOPT_URL, $url);
 
                 $response = curl_exec($ch);
-//                $err = curl_error($ch);
+                $err = curl_error($ch);
 
-//                echo $url;
                 var_dump($response);
-//                return;
                 return;
 
+//                echo $url;
 
                 if ($response === false) {
                     echo json_encode(curl_error($ch), curl_errno($ch));
                 }
 
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-
                 $json_response = json_decode($response);
-
 
                 echo json_encode($this->downloadBackup($json_response,$host));
                 return;
@@ -127,8 +202,19 @@ class BackupsController extends Controller
             echo json_encode(array('result'=>"Error uploading $file."));
             return;
         }
+    }
 
-
+    /**
+     * @param $host
+     * @return bool
+     */
+    public function isLocal($host)
+    {
+        if($host->is_local == 1){
+            return true;
+        }else{
+            return false;
+        }
     }
 
 
@@ -234,7 +320,5 @@ class BackupsController extends Controller
             return;
         }
     }
-
-
 
 }
