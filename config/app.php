@@ -125,6 +125,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Constants
+    |--------------------------------------------------------------------------
+    |
+    | Custom constants
+    |
+    */
+
+    'script_file' => env('SCRIPT_FILE', 'backup_h2adv.php'),
+
+    'backups_directory' => env('BACKUPS_DIRECTORY', 'BACKUPS'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Autoloaded Service Providers
     |--------------------------------------------------------------------------
     |
@@ -133,8 +146,6 @@ return [
     | this array to grant expanded functionality to your applications.
     |
     */
-
-    'script_file' => env('SCRIPT_FILE', 'backup_h2adv.php'),
 
     'providers' => [
 
