@@ -63,6 +63,14 @@
                     <input type="text" name="domain" placeholder="domain" value="{{$host->domain}}">
                 </td>
             </tr>
+            <tr>
+                <td class="title-list">
+                    domain
+                </td>
+                <td class="value-list">
+                    <input type="text" name="host_slug" placeholder="host_slug" value="{{$host->host_slug}}">
+                </td>
+            </tr>
             <tr class="remote">
                 <td class="title-list">
                     ftp_host

@@ -68,6 +68,7 @@ class HostsController extends Controller
         $host->domain = $request->domain;
         $host->host_name = $request->host_name;
         $host->ftp_host = $request->ftp_host;
+        $host->host_slug = $request->host_slug;
         $host->ftp_username = $request->ftp_username;
         $host->ftp_password = $request->ftp_password;
         $host->ftp_directory = $request->ftp_directory;

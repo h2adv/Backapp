@@ -30,10 +30,12 @@ class BackupsController extends Controller
     private $target;
     private $conn;
     private $file_name;
+    private $backups_directory;
 
     public function __construct()
     {
         $this->file_name = config('app.script_file');
+        $this->backups_directory = config('app.backups_directory');
     }
 
     /**
@@ -149,7 +151,7 @@ class BackupsController extends Controller
 
         $file = storage_path().'/app/public/'.$this->file_name;
         $url_partial =  $host->ftp_host;
-        $url = 'http://'.$host->domain.'/'.$this->file_name.'?backup_ftp=true';
+        $url = $host->domain.'/'.$this->file_name.'?backup_ftp=true';
         $ftp_conn = ftp_connect($url_partial);
 
         if(!ftp_login($ftp_conn, $host->ftp_username, $host->ftp_password))
@@ -164,38 +166,15 @@ class BackupsController extends Controller
             ));
 
             try {
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+                $response = $this->curlConnect($data, $url);
 
-                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch, CURLOPT_URL, $url);
-
-                $response = curl_exec($ch);
-                $err = curl_error($ch);
-
-                var_dump($response);
-                return;
-
-//                echo $url;
-
-                if ($response === false) {
-                    echo json_encode(curl_error($ch), curl_errno($ch));
-                }
-
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $json_response = json_decode($response);
-
-                echo json_encode($this->downloadBackup($json_response,$host));
+                echo json_encode($this->downloadBackup($response, $host));
                 return;
 
             }catch(Exception $e){
                 echo json_encode($e->getMessage());
                 return;
             }
-
         }
         else
         {
@@ -205,73 +184,92 @@ class BackupsController extends Controller
     }
 
     /**
-     * @param $host
-     * @return bool
-     */
-    public function isLocal($host)
-    {
-        if($host->is_local == 1){
-            return true;
-        }else{
-            return false;
-        }
-    }
-
-
-    /**
-     * @param $file
-     * @param $host
-     * @return mixed
-     */
-    public function finishBackup($file, $host)
-    {
-
-        $data = json_encode(array(
-            'file'=>$file
-        ));
-
-        // set URL and other appropriate options
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_URL, $host->ftp_host."/backup_h2adv.php?delete=true");
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json; charset=utf-8',
-                'Content-Length: ' . strlen($data)
-            )
-        );
-
-        $response = curl_exec($ch);
-        $abc = json_encode($response);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $json_response = json_decode($response);
-        return $json_response;
-    }
-
-
-    /**
      * @param $json_response
      * @param $host
      * @return bool|mixed
      */
     public function downloadBackup($json_response, $host)
     {
-        if($json_response->type == 'ftp') {$path='ftp';}else{$path= 'sql';}
-        $dir = storage_path().'/backups/'.$path.$host->host_slug;
-        $file = $dir.'/'.$json_response->filename;
-        if(!file_exists($dir)){
-            mkdir($dir, 777, true);
+        if($json_response->type == 'ftp') {
+            $path='ftp';
+        } else {
+            $path= 'sql';
         }
-        file_put_contents($file , fopen($json_response->filename_url, 'r'));
+
+        $dir = $_SERVER['DOCUMENT_ROOT'].'/'.$this->backups_directory.'/'.$host->host_slug.'/'.$path;
+        $file = $dir.'/'.$json_response->filename;
+
+        if(!file_exists($dir)){
+            mkdir($dir, 0777, true);
+        }
+
+        file_put_contents($file, fopen($json_response->filename_url, 'r'));
+
         if(file_exists($file)){
-            return $this->finishBackup($json_response->filename,$host);
+            return $this->cleanBackup($json_response->filename, $host);
         }
         else {
             return false;
         }
     }
 
+    /**
+     * @param $file
+     * @param $host
+     * @return mixed
+     */
+    public function cleanBackup($file, $host)
+    {
+        $url = $host->domain.'/'.$this->file_name.'?clean=true';
+
+        $data = json_encode(array(
+            'file'=>'./'.$file,
+            'adsasd'=>'a sda sd'
+        ));
+
+        try {
+            $response = $this->curlConnect($data, $url, true);
+            echo json_encode($response);
+            return true;
+        } catch(Exception $e) {
+            echo json_encode($e->getMessage());
+            return false;
+        }
+    }
+
+    public function curlConnect($data, $url, $opt = null)
+    {
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_FAILONERROR, true );
+        curl_setopt($ch, CURLOPT_HEADER, false );
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 10 );
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLINFO_HEADER_OUT, false );
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        if($opt == null) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                'Accept: application/json',
+            ));
+        }else{
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                'Accept: application/json',
+                'Content-Type: application/json'
+            ));
+        }
+        $response = curl_exec($ch);
+
+        if ($response === false) {
+            return json_encode(curl_error($ch), curl_errno($ch));
+        }
+
+        return json_decode($response);
+    }
 
     /**
      * @return bool
@@ -318,6 +316,19 @@ class BackupsController extends Controller
         {
             echo json_encode(array('result'=>"Error uploading $file."));
             return;
+        }
+    }
+
+    /**
+     * @param $host
+     * @return bool
+     */
+    public function isLocal($host)
+    {
+        if($host->is_local == 1){
+            return true;
+        }else{
+            return false;
         }
     }
 
