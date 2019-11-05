@@ -31,10 +31,12 @@ class BackupsController extends Controller
     private $conn;
     private $file_name;
     private $backups_directory;
+    private $id;
 
     public function __construct()
     {
         $this->file_name = config('app.script_file');
+        $this->backups_directory = config('app.backups_directory');
         $this->backups_directory = config('app.backups_directory');
     }
 
@@ -56,8 +58,8 @@ class BackupsController extends Controller
      */
     public function getBackups()
     {
-        $hosts = DB::table('hosts')->get();
-        return view('backup', ['hosts' => $hosts]);
+        $this->hosts = DB::table('hosts')->get();
+        return view('backup', ['hosts' => $this->hosts]);
     }
 
     /**
@@ -67,37 +69,37 @@ class BackupsController extends Controller
     public function ftpDoBackup(Request $request)
     {
         $id = $request->route('id');
-        $host = DB::table('hosts')->find($id);
-        if($this->isLocal( $host )){
-            $this->localFtpBackup($host);
+        $this->host = DB::table('hosts')->find($id);
+        if($this->isLocal()){
+            $this->localFtpBackup();
         }else{
-            $this->remoteFtpBackup($host);
+            $this->remoteFtpBackup();
         }
     }
 
     /**
-     * @param $host
+     * @param $this->host
      */
-    private function localFtpBackup($host)
+    public function localFtpBackup()
     {
 
 //        $file = storage_path().'/app/public/backup_h2adv.php';
-//        $url_partial =  $host->ftp_host;
+//        $url_partial =  $this->host->ftp_host;
 //
-//        $url = 'http://'.$host->domain.'/backup_h2adv.php?backup_ftp=true' ;
+//        $url = 'http://'.$this->host->domain.'/backup_h2adv.php?backup_ftp=true' ;
 //        $ftp_conn = ftp_connect($url_partial);
 //
-//        if(!ftp_login($ftp_conn, $host->ftp_username, $host->ftp_password))
+//        if(!ftp_login($ftp_conn, $this->host->ftp_username, $this->host->ftp_password))
 //        {
 //            die('Ftp login error');
 //        }
 //
-//        if(ftp_put($ftp_conn, $host->ftp_directory."/backup_h2adv.php", $file, FTP_ASCII))
+//        if(ftp_put($ftp_conn, $this->host->ftp_directory."/backup_h2adv.php", $file, FTP_ASCII))
 //        {
 //
 //            ftp_close($ftp_conn);
 //            $data = json_encode(array(
-//                'directory'=>$host->ftp_directory
+//                'directory'=>$this->host->ftp_directory
 //            ));
 //
 //            try {
@@ -127,7 +129,7 @@ class BackupsController extends Controller
 //                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 //                $json_response = json_decode($response);
 //
-//                echo json_encode($this->downloadBackup($json_response,$host));
+//                echo json_encode($this->downloadBackup($json_response,$this->host));
 //                return;
 //
 //            }catch(Exception $e){
@@ -145,32 +147,38 @@ class BackupsController extends Controller
     }
 
     /**
-     * @param $host
+     * @param $this->host
      */
-    public function remoteFtpBackup($host){
+    public function remoteFtpBackup(){
 
         $file = storage_path().'/app/public/'.$this->file_name;
-        $url_partial =  $host->ftp_host;
-        $url = $host->domain.'/'.$this->file_name.'?backup_ftp=true';
+        $url_partial =  $this->host->ftp_host;
+        $url = $this->host->domain.'/'.$this->file_name.'?backup_ftp=true';
         $ftp_conn = ftp_connect($url_partial);
 
-        if(!ftp_login($ftp_conn, $host->ftp_username, $host->ftp_password))
+        if(!ftp_login($ftp_conn, $this->host->ftp_username, $this->host->ftp_password))
         {
             die('Ftp login error');
         }
 
-        if ($file_put = ftp_put($ftp_conn, $host->ftp_directory."/".$this->file_name, $file, FTP_ASCII))
+        if ($file_put = ftp_put($ftp_conn, $this->host->ftp_directory."/".$this->file_name, $file, FTP_ASCII))
         {
             $data = json_encode(array(
-                'directory'=>$host->ftp_directory
+                'directory'=>$this->host->ftp_directory
             ));
 
             try {
+                $message = "";
                 $response = $this->curlConnect($data, $url);
+                $download = $this->downloadBackup($response, $this->host);
+                if($download == true){
+                    $message = $download;
+                    return redirect()->route('backup-saved', ['id'=>$this->host,'saved'=>true]);
 
-                echo json_encode($this->downloadBackup($response, $host));
+                }else{
+                    $message = $download;
+                }
                 return;
-
             }catch(Exception $e){
                 echo json_encode($e->getMessage());
                 return;
@@ -185,10 +193,10 @@ class BackupsController extends Controller
 
     /**
      * @param $json_response
-     * @param $host
+     * @param $this->host
      * @return bool|mixed
      */
-    public function downloadBackup($json_response, $host)
+    public function downloadBackup($json_response)
     {
         if($json_response->type == 'ftp') {
             $path='ftp';
@@ -196,7 +204,7 @@ class BackupsController extends Controller
             $path= 'sql';
         }
 
-        $dir = $_SERVER['DOCUMENT_ROOT'].'/'.$this->backups_directory.'/'.$host->host_slug.'/'.$path;
+        $dir = $_SERVER['DOCUMENT_ROOT'].'/'.$this->backups_directory.'/'.$this->host->host_slug.'/'.$path;
         $file = $dir.'/'.$json_response->filename;
 
         if(!file_exists($dir)){
@@ -206,7 +214,7 @@ class BackupsController extends Controller
         file_put_contents($file, fopen($json_response->filename_url, 'r'));
 
         if(file_exists($file)){
-            return $this->cleanBackup($json_response->filename, $host);
+            return $this->cleanBackup($json_response->filename, $this->host);
         }
         else {
             return false;
@@ -215,21 +223,19 @@ class BackupsController extends Controller
 
     /**
      * @param $file
-     * @param $host
+     * @param $this->host
      * @return mixed
      */
-    public function cleanBackup($file, $host)
+    public function cleanBackup($file)
     {
-        $url = $host->domain.'/'.$this->file_name.'?clean=true';
+        $url = $this->host->domain.'/'.$this->file_name.'?clean=true';
 
         $data = json_encode(array(
             'file'=>'./'.$file,
-            'adsasd'=>'a sda sd'
         ));
 
         try {
             $response = $this->curlConnect($data, $url, true);
-            echo json_encode($response);
             return true;
         } catch(Exception $e) {
             echo json_encode($e->getMessage());
@@ -280,24 +286,24 @@ class BackupsController extends Controller
         $id = $request->input('id');
         $file = storage_path().'/app/public/backup_h2adv.php';
 
-        $host = DB::table('hosts')->find($id);
+        $this->host = DB::table('hosts')->find($id);
 //        $this->startBackup($id);
 //        $file = 'remote/backup_h2adv.php';
         // upload file
-        $ftp_conn = ftp_connect($host->ftp_host) or die("Could not connect to $host");
-        if(!ftp_login($ftp_conn, $host->ftp_username, $host->ftp_password))
+        $ftp_conn = ftp_connect($this->host->ftp_host) or die("Could not connect to $this->host");
+        if(!ftp_login($ftp_conn, $this->host->ftp_username, $this->host->ftp_password))
         {
             die('Ftp login error');
         }
 
-        if (ftp_put($ftp_conn, $host->ftp_directory."/backup_h2adv.php", $file, FTP_ASCII))
+        if (ftp_put($ftp_conn, $this->host->ftp_directory."/backup_h2adv.php", $file, FTP_ASCII))
         {
-            $data = json_encode($host);
+            $data = json_encode($this->host);
 
             // set URL and other appropriate options
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_URL, $host->ftp_host."/backup_h2adv.php?backup_sql=true");
+            curl_setopt($ch, CURLOPT_URL, $this->host->ftp_host."/backup_h2adv.php?backup_sql=true");
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_HTTPHEADER, array(
@@ -310,7 +316,7 @@ class BackupsController extends Controller
             $abc = json_encode($response);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $json_response = json_decode($response);
-            echo json_encode($this->downloadBackup($json_response,$host));
+            echo json_encode($this->downloadBackup($json_response,$this->host));
         }
         else
         {
@@ -320,12 +326,12 @@ class BackupsController extends Controller
     }
 
     /**
-     * @param $host
+     * @param $this->host
      * @return bool
      */
-    public function isLocal($host)
+    public function isLocal()
     {
-        if($host->is_local == 1){
+        if($this->host->is_local == 1){
             return true;
         }else{
             return false;

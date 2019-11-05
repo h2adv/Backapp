@@ -29,3 +29,5 @@ Route::post('hosts/delete', 'HostsController@deleteHosts');
 Route::post('hosts/toggle', 'HostsController@toggle') ;
 Route::post('hosts/edit', 'HostsController@editDoHost') ;
 Route::post('backups/sql-do', 'BackupsController@sqlDoBackup');
+Route::post('backups/get', 'BackupsController@getBackups')->name('backup-saved');
+
