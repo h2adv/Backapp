@@ -22,7 +22,7 @@ class HostsController extends Controller
         return view('hosts', ['hosts' => $hosts]);
     }
 
-    public function toggle(Request $request)
+    public function toggleHost(Request $request)
     {
         $data = $request->json()->all();
         $id = $data['id'];

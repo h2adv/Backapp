@@ -1,8 +1,10 @@
 @extends('layouts.layout')
 @section('title', 'Backup')
 @section('content')
+    <div class="alert message-backup" role="alert" style="display: none">
+    </div>
     <div class="actions">
-        <a href="#">Run backup</a>
+        <a href="#">Run all backups</a>
     </div>
     <table class="table">
         <thead>
@@ -13,16 +15,15 @@
         @foreach ($hosts as $host)
             <tr>
                 <td>
-                    <a data-id="{{$host->id}}"
-                       class="backup-ftp-do" href="<?php echo URL::to('/backups/ftp-do',$host->id); ?>">Backup ftp now
-                    </a> |
-                    <a data-id="{{$host->id}}" class="backup-mysql-do" href="#">Backup sql now</a>
-                </td>
-                <td>
                     <span style="font-weight: bold">[{{ $host->id }}]</span>
                     <span style="font-weight: bold">{{ $host->host_name }}:</span>
                 </td>
                 <td>
+                    <a data-id="{{$host->id}}"
+                       class="backup-ftp-do" href="#">Backup ftp now
+                    </a> |
+                    <a data-id="{{$host->id}}" class="backup-mysql-do" href="#">Backup sql now</a>
+                </td>
             </tr>
         @endforeach
         </tbody>

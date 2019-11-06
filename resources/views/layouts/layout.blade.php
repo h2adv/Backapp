@@ -242,28 +242,27 @@
             }
 
 
-        // $('.backup-ftp-do').on('click',function () {
-        //     $.ajax({
-        //         type: 'POST',
-        //         dataType: "json",
-        //         url: '/backups/ftp-do/'+$(this).attr('data-id'),
-        //         success: function (data) {
-        //             console.log(data);
-        //
-        //             let obj = data;
-        //             if(obj.result === "true") {
-        //                 console.log(obj);
-        //
-        //                 // location.reload();
-        //             }else{
-        //                 console.log('Error');
-        //             }
-        //         },
-        //         error: function(data) {
-        //             console.log(data);
-        //         }
-        //     });
-        // });
+        $('.backup-ftp-do').on('click',function () {
+            $.ajax({
+                type: 'POST',
+                dataType: "json",
+                url: '/backups/ftp-do/'+$(this).attr('data-id'),
+                success: function (data) {
+                    console.log(data);
+
+                    if(data.result === true) {
+                        console.log(data);
+                        showMessageBackup(data.host.id)
+                        // location.reload();
+                    }else{
+                        console.log('Error');
+                    }
+                },
+                error: function(data) {
+                    console.log(data);
+                }
+            });
+        });
 
         $('.backup-mysql-do').on('click',function () {
 
@@ -292,6 +291,18 @@
         });
 
     });
+
+    function showMessageBackup(id,is_error) {
+        let message_box = $('.message-backup');
+        message_box.show();
+        if(is_error) {
+            message_box.addClass('alert-warning');
+            message_box.text('Backup error on id: '+id);
+        }else{
+            message_box.addClass('alert-success');
+            message_box.text('Backup done on id: '+id);
+        }
+    }
 </script>
 </body>
 </html>
