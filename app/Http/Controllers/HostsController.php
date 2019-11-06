@@ -73,6 +73,9 @@ class HostsController extends Controller
         $host->ftp_password = $request->ftp_password;
         $host->ftp_directory = $request->ftp_directory;
         $host->db_host = $request->db_host;
+        $host->db_name = $request->db_name;
+        $host->db_username = $request->db_username;
+        $host->db_password = $request->db_password;
         $host->is_local = $request->is_local;
         $host->local_path = $request->local_path;
         if($host->save()){

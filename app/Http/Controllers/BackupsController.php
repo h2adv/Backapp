@@ -102,13 +102,7 @@ class BackupsController extends Controller
             try
             {
                 $url = $this->host->domain.'/'.$this->file_name.'?backup_ftp=true';
-                $response = $this->curlConnect($data, $url);
-                $download = $this->downloadBackup($response);
-                if(($download == true) &&($response->result == true)){
-                    echo json_encode(['host'=>$this->host,'result'=>true]);
-                }else{
-                    echo json_encode(['host'=>$this->host,'result'=>false]);
-                }
+                $this->curlCall($data, $url);
             }
             catch(Exception $e)
             {
@@ -149,15 +143,14 @@ class BackupsController extends Controller
      */
     public function curlConnect($data, $url, $opt = null)
     {
-
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
         curl_setopt($ch, CURLOPT_FAILONERROR, true );
         curl_setopt($ch, CURLOPT_HEADER, false );
         curl_setopt($ch, CURLOPT_MAXREDIRS, 10 );
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
         curl_setopt($ch, CURLINFO_HEADER_OUT, false );
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, 1);
@@ -173,9 +166,11 @@ class BackupsController extends Controller
             ));
         }
         $response = curl_exec($ch);
-
+        var_dump(curl_error($ch));
+        var_dump($response);
+die();
         if ($response === false) {
-            return json_encode(curl_error($ch), curl_errno($ch));
+            return json_decode(curl_error($ch));
         }
 
         return json_decode($response);
@@ -189,44 +184,30 @@ class BackupsController extends Controller
     {
         $id = $request->input('id');
         $file = storage_path().'/app/public/backup_h2adv.php';
-
         $this->host = DB::table('hosts')->find($id);
-//        $this->startBackup($id);
-//        $file = 'remote/backup_h2adv.php';
-        // upload file
-        $ftp_conn = ftp_connect($this->host->ftp_host) or die("Could not connect to $this->host");
-        if(!ftp_login($ftp_conn, $this->host->ftp_username, $this->host->ftp_password))
-        {
-            die('Ftp login error');
-        }
 
-        if (ftp_put($ftp_conn, $this->host->ftp_directory."/backup_h2adv.php", $file, FTP_ASCII))
-        {
+        if ($this->sendBackupFile()){
             $data = json_encode($this->host);
-
-            // set URL and other appropriate options
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_URL, $this->host->ftp_host."/backup_h2adv.php?backup_sql=true");
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                    'Content-Type: application/json; charset=utf-8',
-                    'Content-Length: ' . strlen($data)
-                )
-            );
-
-            $response = curl_exec($ch);
-            $abc = json_encode($response);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $json_response = json_decode($response);
-            echo $response;die();
-            echo json_encode($this->downloadBackup($json_response,$this->host));
+            $url = $this->host->domain.'/'.$this->file_name.'?backup_sql=true';
+            $this->curlCall($data, $url);
+            return;
         }
         else
         {
             echo json_encode(array('result'=>"Error uploading $file."));
             return;
+        }
+    }
+
+    public function curlCall($data,$url)
+    {
+        $response = $this->curlConnect($data, $url);
+        $download = $this->downloadBackup($response);
+
+        if(($download == true) && ($response->result == true)){
+            echo json_encode(['host'=>$this->host,'result'=>true]);
+        }else{
+            echo json_encode(['host'=>$this->host,'result'=>false]);
         }
     }
 

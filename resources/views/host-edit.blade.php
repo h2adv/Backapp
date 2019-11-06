@@ -113,6 +113,14 @@
             </tr>
             <tr>
                 <td class="title-list">
+                    db_host
+                </td>
+                <td class="value-list">
+                    <input type="text" name="db_name" placeholder="db_name" value="{{$host->db_name}}">
+                </td>
+            </tr>
+            <tr>
+                <td class="title-list">
                     db_username
                 </td>
                 <td class="value-list">

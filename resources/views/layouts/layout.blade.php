@@ -275,7 +275,12 @@
                 url: '/backups/sql-do',
                 success: function (data) {
                     console.log(data);
-                    if(data.result === "true") {
+                    let error = data.message;
+
+                    if(data.result === true) {
+                        console.log(data);
+                        showMessageBackup(data.host.id,error)
+                        // location.reload();
                     }else{
                         console.log('Error');
                     }
@@ -291,6 +296,7 @@
     function showMessageBackup(id,error) {
         let message_box = $('.message-backup');
         message_box.show();
+        message_box.html();
         if(error) {
             message_box.addClass('alert-warning');
             message_box.text('Backup error on id: '+id);
