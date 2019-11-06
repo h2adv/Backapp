@@ -111,7 +111,8 @@ class BackupsController extends Controller
                 'directory'=>$this->host->ftp_directory
             ));
 
-            try {
+            try
+            {
                 $response = $this->curlConnect($data, $url);
                 $download = $this->downloadBackup($response);
                 if($download == true){
@@ -120,12 +121,12 @@ class BackupsController extends Controller
                     echo json_encode(['host'=>$this->host,'result'=>false]);
                 }
             }catch(Exception $e){
-                echo json_encode($e->getMessage());
+                echo json_encode(['host'=>$this->host,'result'=>false,'error'=>$e->getMessage()]);
             }
         }
         else
         {
-            echo json_encode(array('result'=>"Error uploading $file."));
+            echo json_encode(['host'=>$this->host,'result'=>false,'error'=>"Error uploading $file."]);
         }
     }
 

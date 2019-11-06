@@ -249,10 +249,11 @@
                 url: '/backups/ftp-do/'+$(this).attr('data-id'),
                 success: function (data) {
                     console.log(data);
+                    let error = data.message;
 
                     if(data.result === true) {
                         console.log(data);
-                        showMessageBackup(data.host.id)
+                        showMessageBackup(data.host.id,error)
                         // location.reload();
                     }else{
                         console.log('Error');
@@ -274,12 +275,7 @@
                 url: '/backups/sql-do',
                 success: function (data) {
                     let obj = data;
-                    console.log(obj);
-
                     if(obj.result === "true") {
-                        console.log(obj);
-
-                        // location.reload();
                     }else{
                         console.log('Error');
                     }
@@ -292,12 +288,13 @@
 
     });
 
-    function showMessageBackup(id,is_error) {
+    function showMessageBackup(id,error) {
         let message_box = $('.message-backup');
         message_box.show();
-        if(is_error) {
+        if(error) {
             message_box.addClass('alert-warning');
             message_box.text('Backup error on id: '+id);
+            message_box.append('<p>'+error+'</p>');
         }else{
             message_box.addClass('alert-success');
             message_box.text('Backup done on id: '+id);
