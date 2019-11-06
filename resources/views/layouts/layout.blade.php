@@ -274,8 +274,8 @@
                 data: data,
                 url: '/backups/sql-do',
                 success: function (data) {
-                    let obj = data;
-                    if(obj.result === "true") {
+                    console.log(data);
+                    if(data.result === "true") {
                     }else{
                         console.log('Error');
                     }

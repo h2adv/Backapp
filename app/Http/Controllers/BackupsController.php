@@ -115,12 +115,14 @@ class BackupsController extends Controller
             {
                 $response = $this->curlConnect($data, $url);
                 $download = $this->downloadBackup($response);
-                if($download == true){
+                if(($download == true) &&($response->result == true)){
                     echo json_encode(['host'=>$this->host,'result'=>true]);
                 }else{
                     echo json_encode(['host'=>$this->host,'result'=>false]);
                 }
-            }catch(Exception $e){
+            }
+            catch(Exception $e)
+            {
                 echo json_encode(['host'=>$this->host,'result'=>false,'error'=>$e->getMessage()]);
             }
         }
