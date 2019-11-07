@@ -200,7 +200,7 @@ class BackupsController extends Controller
                 $dump = new Mysqldump('mysql:host='.$this->host->db_host.';dbname='.$this->host->db_name, $this->host->db_username, $this->host->db_password, ['compress' => Mysqldump::GZIP]);
                 $dir = $_SERVER['DOCUMENT_ROOT'].'/'.$this->backups_directory.'/'.$this->host->host_slug.'/sql/';
                 $t = dechex(substr_replace(substr((string)explode(" ",microtime())[0],2), '', -4));
-                $backup_file = date("Y-m-d-H:i:s") . '['.$t.'].sql.zip';
+                $backup_file = 'Archive_sql_'.date("d-m-Y-H:i:s") . '['.$t.'].sql.zip';
 
                 $file = $dir.'/'.$backup_file;
                 $dump->start($file);
