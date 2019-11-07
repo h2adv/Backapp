@@ -15,6 +15,11 @@
         @foreach ($hosts as $host)
             <tr>
                 <td>
+                    <div id="loading">
+                        <div class="spinner-border text-dark" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
                     <span style="font-weight: bold">[{{ $host->id }}]</span>
                     <span style="font-weight: bold">{{ $host->host_name }}:</span>
                 </td>

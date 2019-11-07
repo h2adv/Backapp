@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Backupper</title>
 
@@ -77,6 +77,14 @@
         }
         table {
             margin: 40px 0 50px 0!important;
+        }
+        #loading {
+            position: absolute;
+            width: 100%;
+            background-color: #fffa;
+            margin: auto;
+            left: 0;
+            display: none;
         }
     </style>
 </head>
@@ -243,30 +251,30 @@
 
 
         $('.backup-ftp-do').on('click',function () {
+            $('#loading').show();
             $.ajax({
                 type: 'POST',
                 dataType: "json",
                 url: '/backups/ftp-do/'+$(this).attr('data-id'),
                 success: function (data) {
-                    console.log(data);
                     let error = data.message;
+                    console.log(data);
 
                     if(data.result === true) {
-                        console.log(data);
+                        $('#loading').hide();
                         showMessageBackup(data.host.id,error)
-                        // location.reload();
                     }else{
-                        console.log('Error');
+                        $('#loading').hide();
                     }
                 },
                 error: function(data) {
-                    console.log(data);
+                    $('#loading').hide();
                 }
             });
         });
 
         $('.backup-mysql-do').on('click',function () {
-
+            $('#loading').show();
             let data = {id: $(this).attr('data-id')};
             $.ajax({
                 type: 'POST',
@@ -274,24 +282,31 @@
                 data: data,
                 url: '/backups/sql-do',
                 success: function (data) {
-                    console.log(data);
                     let error = data.message;
+                    console.log(data);
 
                     if(data.result === true) {
-                        console.log(data);
+                        $('#loading').hide();
                         showMessageBackup(data.host.id,error)
-                        // location.reload();
                     }else{
-                        console.log('Error');
+                        $('#loading').hide();
                     }
                 },
                 error: function(data) {
-                    console.log(data);
+                    $('#loading').hide();
                 }
             });
         });
 
     });
+
+    function loadingStart(){
+        $('#loading').show();
+    }
+
+    function loadingEnd(){
+        $('#loading').hide();
+    }
 
     function showMessageBackup(id,error) {
         let message_box = $('.message-backup');

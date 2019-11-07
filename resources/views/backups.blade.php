@@ -14,9 +14,6 @@
         @foreach ($backups as $backup)
             <tr>
                 <td>
-                    <div class="spinner-border" role="status" style="display: none">
-                        <span class="sr-only">Loading...</span>
-                    </div>
                     <span style="font-weight: bold">[{{ $backup->id }}]</span>
                 </td>
                 <td>
