@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use http\Exception;
+use Ifsnop\Mysqldump\Mysqldump;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,7 +103,13 @@ class BackupsController extends Controller
             try
             {
                 $url = $this->host->domain.'/'.$this->file_name.'?backup_ftp=true';
-                $this->curlCall($data, $url);
+                $response = $this->curlConnect($data, $url);
+                $download = $this->downloadBackup($response);
+                if(($download == true) && ($response->result == true)){
+                    echo json_encode(['host'=>$this->host,'result'=>true]);
+                }else{
+                    echo json_encode(['host'=>$this->host,'result'=>false]);
+                }
             }
             catch(Exception $e)
             {
@@ -155,6 +162,7 @@ class BackupsController extends Controller
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+
         if($opt == null) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, array(
                 'Accept: application/json',
@@ -165,11 +173,11 @@ class BackupsController extends Controller
                 'Content-Type: application/json'
             ));
         }
+
         $response = curl_exec($ch);
-        var_dump(curl_error($ch));
-        var_dump($response);
-die();
+
         if ($response === false) {
+
             return json_decode(curl_error($ch));
         }
 
@@ -183,13 +191,35 @@ die();
     public function sqlDoBackup(Request $request)
     {
         $id = $request->input('id');
-        $file = storage_path().'/app/public/backup_h2adv.php';
+        $file = storage_path().'/app/public/'.$this->file_name;
         $this->host = DB::table('hosts')->find($id);
 
         if ($this->sendBackupFile()){
-            $data = json_encode($this->host);
-            $url = $this->host->domain.'/'.$this->file_name.'?backup_sql=true';
-            $this->curlCall($data, $url);
+
+            try {
+                $dump = new Mysqldump('mysql:host='.$this->host->db_host.';dbname='.$this->host->db_name, $this->host->db_username, $this->host->db_password, ['compress' => Mysqldump::GZIP]);
+                $dir = $_SERVER['DOCUMENT_ROOT'].'/'.$this->backups_directory.'/'.$this->host->host_slug.'/sql/';
+                $t = dechex(substr_replace(substr((string)explode(" ",microtime())[0],2), '', -4));
+                $backup_file = date("Y-m-d-H:i:s") . '['.$t.'].sql.zip';
+
+                $file = $dir.'/'.$backup_file;
+                $dump->start($file);
+
+                if(!file_exists($dir)){
+                    mkdir($dir, 0777, true);
+                }
+                if(file_exists($file)){
+                    $cleaned = $this->cleanBackup($this->file_name);
+                    if($cleaned == true){
+                        echo json_encode(['host'=>$this->host,'result'=>true]);
+                    }else{
+                        echo json_encode(['host'=>$this->host,'result'=>false]);
+                    }
+                }
+            } catch (\Exception $e) {
+                echo 'mysqldump-php error: ' . $e->getMessage();
+            }
+
             return;
         }
         else
@@ -199,17 +229,6 @@ die();
         }
     }
 
-    public function curlCall($data,$url)
-    {
-        $response = $this->curlConnect($data, $url);
-        $download = $this->downloadBackup($response);
-
-        if(($download == true) && ($response->result == true)){
-            echo json_encode(['host'=>$this->host,'result'=>true]);
-        }else{
-            echo json_encode(['host'=>$this->host,'result'=>false]);
-        }
-    }
 
     /**
      * @param $json_response
@@ -248,11 +267,9 @@ die();
     public function cleanBackup($file)
     {
         $url = $this->host->domain.'/'.$this->file_name.'?clean=true';
-
         $data = json_encode(array(
             'file'=>'./'.$file,
         ));
-
         try {
             $response = $this->curlConnect($data, $url, true);
             return true;

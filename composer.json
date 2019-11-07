@@ -9,16 +9,16 @@
     "license": "MIT",
     "require": {
         "php": "^7.1.3",
+        "ext-curl": "*",
+        "ext-ftp": "*",
+        "ext-json": "*",
+        "ext-zip": "*",
         "fideloper/proxy": "^4.0",
         "guzzlehttp/guzzle": "^6.4",
+        "ifsnop/mysqldump-php": "^2.8",
         "laravel/framework": "5.8.*",
         "laravel/tinker": "^1.0",
-        "laravelcollective/html": "^5.8",
-        "ext-json": "*",
-        "ext-ftp": "*",
-        "ext-curl": "*",
-        "ext-zip": "*",
-        "ext-http": "*"
+        "laravelcollective/html": "^5.8"
     },
     "require-dev": {
         "beyondcode/laravel-dump-server": "^1.0",
