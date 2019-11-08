@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use http\Exception;
+use App\Backups;
 use Ifsnop\Mysqldump\Mysqldump;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Input;
 use Illuminate\View\View;
 
 
@@ -28,6 +30,8 @@ class BackupsController extends Controller
     private $file_name;
     private $backups_directory;
     private $id;
+    private $message;
+
     /**
      * @var \Illuminate\Support\Collection
      */
@@ -84,11 +88,7 @@ class BackupsController extends Controller
     {
         $id = $request->route('id');
         $this->host = DB::table('hosts')->find($id);
-        if($this->isLocal()){
-            $this->localFtpBackup();
-        }else{
-            $this->remoteFtpBackup();
-        }
+        $this->remoteFtpBackup();
     }
 
     /**
@@ -104,22 +104,24 @@ class BackupsController extends Controller
             {
                 $url = $this->host->domain.'/'.$this->file_name.'?backup_ftp=true';
                 $response = $this->curlConnect($data, $url);
-                $download = $this->downloadBackup($response);
+                $download = $this->downloadFtpBackup($response);
                 if(($download == true) && ($response->result == true)){
-                    echo json_encode(['host'=>$this->host,'result'=>true]);
+                    $this->message = ['host_id'=>$this->host->id,'type'=>'ftp','result'=>true];
                 }else{
-                    echo json_encode(['host'=>$this->host,'result'=>false]);
+                    $this->message =  ['host_id'=>$this->host->id,'type'=>'ftp','result'=>$download];
                 }
             }
-            catch(Exception $e)
+            catch(\Exception $e)
             {
-                echo json_encode(['host'=>$this->host,'result'=>false,'error'=>$e->getMessage()]);
+                $this->message =  ['host_id'=>$this->host->id,'type'=>'ftp','result'=>false,'message'=>$e->getMessage()];
             }
         }
         else
         {
-            echo json_encode(['host'=>$this->host,'result'=>false,'error'=>"Error uploading action file."]);
+            $this->message =  ['host_id'=>$this->host->id,'type'=>'ftp','result'=>false,'message'=>"Error uploading action file."];
         }
+        echo json_encode($this->message);
+        $this->registerBackup($this->message);
     }
 
     /**
@@ -130,10 +132,13 @@ class BackupsController extends Controller
         $file = storage_path().'/app/public/'.$this->file_name;
         $url_partial =  $this->host->ftp_host;
         $ftp_conn = ftp_connect($url_partial);
-        if(!ftp_login($ftp_conn, $this->host->ftp_username, $this->host->ftp_password))
+        $loggedIn = ftp_login($ftp_conn, $this->host->ftp_username, $this->host->ftp_password);
+
+        if(true !== $loggedIn)
         {
-            die('Ftp login error');
+            return false;
         }
+
         $file_put = ftp_put($ftp_conn, $this->host->ftp_directory."/".$this->file_name, $file, FTP_ASCII);
         if($file_put){
             return true;
@@ -211,9 +216,9 @@ class BackupsController extends Controller
                 if(file_exists($file)){
                     $cleaned = $this->cleanBackup($this->file_name);
                     if($cleaned == true){
-                        echo json_encode(['host'=>$this->host,'result'=>true]);
+                        echo json_encode(['host'=>$this->host,'type'=>'sql','result'=>true]);
                     }else{
-                        echo json_encode(['host'=>$this->host,'result'=>false]);
+                        echo json_encode(['host'=>$this->host,'type'=>'sql','result'=>false]);
                     }
                 }
             } catch (\Exception $e) {
@@ -229,39 +234,32 @@ class BackupsController extends Controller
         }
     }
 
-
     /**
      * @param $json_response
      * @return bool|mixed
      */
-    public function downloadBackup($json_response)
+    public function downloadFtpBackup($json_response)
     {
-        if($json_response->type == 'ftp') {
-            $path='ftp';
-        } else {
-            $path= 'sql';
-        }
 
-        $dir = $_SERVER['DOCUMENT_ROOT'].'/'.$this->backups_directory.'/'.$this->host->host_slug.'/'.$path;
+        $dir = $_SERVER['DOCUMENT_ROOT'].'/'.$this->backups_directory.'/'.$this->host->host_slug.'/ftp';
         $file = $dir.'/'.$json_response->filename;
 
         if(!file_exists($dir)){
             mkdir($dir, 0777, true);
         }
 
-        file_put_contents($file, fopen($json_response->filename_url, 'r'));
+        $file_put = file_put_contents($file, fopen($json_response->filename_url, 'r'));
 
         if(file_exists($file)){
             return $this->cleanBackup($json_response->filename);
         }
         else {
-            return false;
+            return $file_put;
         }
     }
 
     /**
      * @param $file
-     * @param $this->host
      * @return mixed
      */
     public function cleanBackup($file)
@@ -271,94 +269,21 @@ class BackupsController extends Controller
             'file'=>'./'.$file,
         ));
         try {
-            $response = $this->curlConnect($data, $url, true);
+            $this->curlConnect($data, $url, true);
             return true;
-        } catch(Exception $e) {
-            echo json_encode($e->getMessage());
-            return false;
+        } catch(\Exception $e) {
+            return json_encode($e->getMessage());
         }
     }
 
-
-    /**
-     * @return bool
-     */
-    public function isLocal()
-    {
-        if($this->host->is_local == 1){
-            return true;
-        }else{
-            return false;
+    public function registerBackup($result){
+        $backups = new Backups();
+        $backups->host_id = $result['host_id'];
+        $backups->type = ($result['type'] == 'ftp') ? 0 : 1;
+        if(isset($result['message'])){
+            $backups->message =  $result['message'];
         }
-    }
-
-    /**
-     * @param $this->host
-     */
-    public function localFtpBackup()
-    {
-
-//        $file = storage_path().'/app/public/backup_h2adv.php';
-//        $url_partial =  $this->host->ftp_host;
-//
-//        $url = 'http://'.$this->host->domain.'/backup_h2adv.php?backup_ftp=true' ;
-//        $ftp_conn = ftp_connect($url_partial);
-//
-//        if(!ftp_login($ftp_conn, $this->host->ftp_username, $this->host->ftp_password))
-//        {
-//            die('Ftp login error');
-//        }
-//
-//        if(ftp_put($ftp_conn, $this->host->ftp_directory."/backup_h2adv.php", $file, FTP_ASCII))
-//        {
-//
-//            ftp_close($ftp_conn);
-//            $data = json_encode(array(
-//                'directory'=>$this->host->ftp_directory
-//            ));
-//
-//            try {
-//
-//                $ch = curl_init();
-//
-//                curl_setopt($ch, CURLOPT_URL, $url);
-//                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-//
-//                curl_setopt($ch, CURLOPT_POST, true);
-//                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-//                curl_setopt($ch, CURLOPT_FORBID_REUSE, false);
-//                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-//                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-//
-//                $response  = curl_exec($ch);
-//
-//                $err = curl_error($ch);
-////                curl_close($ch);
-//                var_dump($response);
-//                return;
-//
-//                if ($response === false) {
-//                    echo json_encode(curl_error($ch), curl_errno($ch));
-//                }
-//
-//                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-//                $json_response = json_decode($response);
-//
-//                echo json_encode($this->downloadBackup($json_response,$this->host));
-//                return;
-//
-//            }catch(Exception $e){
-//                echo json_encode($e->getMessage());
-//                return;
-//            }
-//
-//        }
-//        else
-//        {
-//            echo json_encode(array('result'=>"Error uploading $file."));
-//            return;
-//        }
-
+        $backups->save();
     }
 
 }
