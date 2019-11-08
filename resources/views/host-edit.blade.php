@@ -65,7 +65,7 @@
             </tr>
             <tr>
                 <td class="title-list">
-                    domain
+                    host_slug
                 </td>
                 <td class="value-list">
                     <input type="text" name="host_slug" placeholder="host_slug" value="{{$host->host_slug}}">
@@ -81,7 +81,7 @@
             </tr>
             <tr class="remote">
                 <td class="title-list">
-                    ftp_host
+                    ftp_directory
                 </td>
                 <td class="value-list">
                     <input type="text" name="ftp_directory" placeholder="ftp_directory" value="{{$host->ftp_directory}}">
@@ -113,7 +113,7 @@
             </tr>
             <tr>
                 <td class="title-list">
-                    db_host
+                    db_name
                 </td>
                 <td class="value-list">
                     <input type="text" name="db_name" placeholder="db_name" value="{{$host->db_name}}">

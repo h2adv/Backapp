@@ -8,8 +8,8 @@
     </div>
     <table class="table">
         <thead>
+        <th>domain name</th>
         <th>action</th>
-        <th>backup name</th>
         </thead>
         <tbody>
         @foreach ($hosts as $host)
@@ -21,13 +21,13 @@
                         </div>
                     </div>
                     <span style="font-weight: bold">[{{ $host->id }}]</span>
-                    <span style="font-weight: bold">{{ $host->host_name }}:</span>
+                    <span style="font-weight: bold">{{ $host->host_name }}</span>
                 </td>
                 <td>
                     <a data-id="{{$host->id}}"
-                       class="backup-ftp-do" href="#">Backup ftp now
-                    </a> |
-                    <a data-id="{{$host->id}}" class="backup-mysql-do" href="#">Backup sql now</a>
+                       class="backup-ftp-do" href="#">[ Backup ftp now ]
+                    </a> -
+                    <a data-id="{{$host->id}}" class="backup-mysql-do" href="#">[ Backup sql now ]</a>
                 </td>
             </tr>
         @endforeach
