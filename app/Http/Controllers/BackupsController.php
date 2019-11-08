@@ -47,10 +47,14 @@ class BackupsController extends Controller
      *
      * @return View
      */
-    public function getBackupsHistory()
+    public function getBackupLog()
     {
-        $backups = DB::table('backups')->get();
-        return view('backups', ['backups' => $backups]);
+        $backups = DB::table('backups')
+            ->join('hosts', 'backups.host_id', '=', 'hosts.id')
+            ->select('backups.*', 'hosts.host_name')
+            ->get();
+
+        return view('backup-log', ['backups' => $backups]);
     }
 
     /**
@@ -106,19 +110,19 @@ class BackupsController extends Controller
                 $response = $this->curlConnect($data, $url);
                 $download = $this->downloadFtpBackup($response);
                 if(($download == true) && ($response->result == true)){
-                    $this->message = ['host_id'=>$this->host->id,'type'=>'ftp','result'=>true];
+                    $this->message = ['host_id'=>$this->host->id,'type'=>'ftp','result'=>false];
                 }else{
-                    $this->message =  ['host_id'=>$this->host->id,'type'=>'ftp','result'=>$download];
+                    $this->message = ['host_id'=>$this->host->id,'type'=>'ftp','result'=>false,'message'=>$download];
                 }
             }
             catch(\Exception $e)
             {
-                $this->message =  ['host_id'=>$this->host->id,'type'=>'ftp','result'=>false,'message'=>$e->getMessage()];
+                $this->message = ['host_id'=>$this->host->id,'type'=>'ftp','result'=>false,'message'=>$e->getMessage()];
             }
         }
         else
         {
-            $this->message =  ['host_id'=>$this->host->id,'type'=>'ftp','result'=>false,'message'=>"Error uploading action file."];
+            $this->message = ['host_id'=>$this->host->id,'type'=>'ftp','result'=>false,'message'=>"Error uploading action file."];
         }
         echo json_encode($this->message);
         $this->registerBackup($this->message);
@@ -182,7 +186,6 @@ class BackupsController extends Controller
         $response = curl_exec($ch);
 
         if ($response === false) {
-
             return json_decode(curl_error($ch));
         }
 
@@ -198,9 +201,8 @@ class BackupsController extends Controller
         $id = $request->input('id');
         $file = storage_path().'/app/public/'.$this->file_name;
         $this->host = DB::table('hosts')->find($id);
-
-        if ($this->sendBackupFile()){
-
+        $file_sent = $this->sendBackupFile();
+        if ($file_sent){
             try {
                 $dump = new Mysqldump('mysql:host='.$this->host->db_host.';dbname='.$this->host->db_name, $this->host->db_username, $this->host->db_password, ['compress' => Mysqldump::GZIP]);
                 $dir = $_SERVER['DOCUMENT_ROOT'].'/'.$this->backups_directory.'/'.$this->host->host_slug.'/sql/';
@@ -216,21 +218,19 @@ class BackupsController extends Controller
                 if(file_exists($file)){
                     $cleaned = $this->cleanBackup($this->file_name);
                     if($cleaned == true){
-                        echo json_encode(['host'=>$this->host,'type'=>'sql','result'=>true]);
+                        $this->message = ['host_id'=>$this->host->id,'type'=>'sql','result'=>true];
+                        return $this->registerBackup($this->message);
                     }else{
-                        echo json_encode(['host'=>$this->host,'type'=>'sql','result'=>false]);
+                        $this->message = ['host_id'=>$this->host->id,'type'=>'sql','result'=>false,'message'=>$cleaned];
                     }
                 }
             } catch (\Exception $e) {
-                echo 'mysqldump-php error: ' . $e->getMessage();
+                echo json_encode(['host_id'=>$this->host->id,'type'=>'sql','result'=>false,'message'=>$e->getMessage()]);
             }
-
-            return;
         }
         else
         {
-            echo json_encode(array('result'=>"Error uploading $file."));
-            return;
+            echo json_encode(['host_id'=>$this->host->id,'type'=>'sql','result'=>false,'message'=>$file_sent]);
         }
     }
 
@@ -278,8 +278,10 @@ class BackupsController extends Controller
 
     public function registerBackup($result){
         $backups = new Backups();
+
         $backups->host_id = $result['host_id'];
         $backups->type = ($result['type'] == 'ftp') ? 0 : 1;
+        $backups->result = ($result['result'] == true) ? 0 : 1;
         if(isset($result['message'])){
             $backups->message =  $result['message'];
         }

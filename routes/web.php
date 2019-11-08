@@ -17,7 +17,7 @@ Route::view('/', 'home');
 
 Route::get('settings/get','SettingsController@getSettings');
 Route::get('backups/get','BackupsController@getBackups')->name('backup-saved');
-Route::get('backups/history','BackupsController@getBackupsHistory');
+Route::get('backups/log','BackupsController@getBackupLog');
 Route::get('backups/ftp-do/{id}','BackupsController@ftpDoBackup');
 Route::get('hosts/get','HostsController@getHosts');
 Route::get('host/edit/{id}/{saved?}','HostsController@editHost')->name('host-saved');
